@@ -11,8 +11,12 @@ load_dotenv()
 # We use os.getenv to safely get the key from your .env file
 # Make sure your .env file has OPENAI_API_KEY or GOOGLE_API_KEY
 # But for now, we will paste the key here to be safe:
-MY_KEY = "AIzaSyAhYExFlRSfJrylLEUkeUipySLs6ZnyyUA"
-genai.configure(api_key=MY_KEY)
+# NEW CODE (PASTE THIS):
+import os
+# This tells Python to look inside Render's "Environment Variables" for the key
+MY_SECRET_KEY = os.environ.get("GOOGLE_API_KEY")
+genai.configure(api_key=MY_SECRET_KEY)
+
 
 # 2. Setup Model (Use the one that worked for you!)
 # Update this line to give it a specific job
