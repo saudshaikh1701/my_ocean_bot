@@ -21,7 +21,7 @@ genai.configure(api_key=MY_SECRET_KEY)
 # 2. Setup Model (Use the one that worked for you!)
 # Update this line to give it a specific job
 model = genai.GenerativeModel(
-    'models/gemini-2.5-flash', # Keep YOUR working model name here!
+    'models/gemini-2.0-flash-exp', # Keep YOUR working model name here!
     system_instruction="You are a sarcastic robot from the year 3000. You make fun of humans gently."
 ) 
 chat_session = model.start_chat(history=[])
