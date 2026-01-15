@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ocean AI Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* OCEAN THEME STYLES */
+        body {
+            font-family: 'Quicksand', sans-serif; /* Softer, rounder font */
+            /* Deep ocean gradient background */
+            background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 400px;
+            height: 650px;
+            /* Frosted Glass Effect */
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            /* Tropical water gradient */
+            background: linear-gradient(to right, #00d2ff, #3a7bd5);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            /* Subtle inner light */
+            background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Hide scrollbar for cleaner look */
+        #chat-box::-webkit-scrollbar { width: 5px; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            /* Bubbly round corners */
+            border-radius: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .user {
+            /* Aqua bubble for user */
+            background: linear-gradient(to bottom right, #00f2c3, #0098f0);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px; /* Subtle point */
+        }
+
+        .bot {
+            /* Seafoam/Pearl bubble for bot */
+            background: linear-gradient(to bottom right, #e0f7fa, #b2ebf2);
+            color: #006064;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px; /* Subtle point */
+        }
+
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background: rgba(0,0,0,0.2); /* Darker translucent base */
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            /* Translucent input field */
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 30px;
+            outline: none;
+            font-family: 'Quicksand', sans-serif;
+            color: #006064;
+        }
+        input::placeholder { color: #80deea; }
+
+        button {
+            /* Matching aqua gradient button */
+            background: linear-gradient(to right, #00d2ff, #3a7bd5);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            margin-left: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.1); }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">🌊 Huh,You Again?!</div>
+    <div id="chat-box">
+        <div class="message bot">Splish splash! I'm ready to chat.</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Send a message in a bottle..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">&#10148;</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById("user-input");
+        const chatBox = document.getElementById("chat-box");
+        const text = input.value;
+        
+        if (!text) return;
+
+        // 1. Add User Message
+        chatBox.innerHTML += `<div class="message user">${text}</div>`;
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 2. Add "Typing..." placeholder containing a wave animation
+        const loadingID = "loading-" + Date.now();
+        chatBox.innerHTML += `<div class="message bot" id="${loadingID}">🌊 Rippling...</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 3. Send to Server
+        try {
+            const response = await fetch("/chat?message=" + encodeURIComponent(text), {
+                method: "POST"
+            });
+            const data = await response.json();
+
+            // 4. Replace placeholder with actual reply
+            document.getElementById(loadingID).innerHTML = data.reply;
+        } catch (error) {
+            document.getElementById(loadingID).innerHTML = "⚠️ Error: The line to the surface is broken.";
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") sendMessage();
+    }
+</script>
+
+</body>
+</html>
