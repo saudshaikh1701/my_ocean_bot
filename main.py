@@ -1,55 +1,62 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import os
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import google.generativeai as genai
-import os
-from dotenv import load_dotenv
+from pydantic import BaseModel
+from groq import Groq
 
-# 1. Load Keys
-load_dotenv()
-# We use os.getenv to safely get the key from your .env file
-# Make sure your .env file has OPENAI_API_KEY or GOOGLE_API_KEY
-# But for now, we will paste the key here to be safe:
-# NEW CODE (PASTE THIS):
-import os
-# This tells Python to look inside Render's "Environment Variables" for the key
-MY_SECRET_KEY = os.environ.get("GOOGLE_API_KEY")
-genai.configure(api_key=MY_SECRET_KEY)
-
-
-# 2. Setup Model (Use the one that worked for you!)
-# Update this line to give it a specific job
-model = genai.GenerativeModel(
-    'models/gemini-flash-latest', # Keep YOUR working model name here!
-    system_instruction="You are a sarcastic robot from the year 3000. You make fun of humans gently."
-) 
-chat_session = model.start_chat(history=[])
-
+# 1. Initialize the App
 app = FastAPI()
 
-# 3. Allow Connections
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# 2. Setup the "Groq" Brain
+# It looks for the key in your Render Environment Variables
+client = Groq(
+    api_key=os.environ.get("GROQ_API_KEY"),
 )
 
-# 4. The Chat Logic
-@app.post("/chat")
-async def chat(message: str):
-    try:
-        response = chat_session.send_message(message)
-        return {"reply": response.text}
-    except Exception as e:
-        return {"reply": f"Error: {str(e)}"}
+# Define the data format for incoming messages
+class ChatRequest(BaseModel):
+    message: str
 
-# 5. Serve the Website (The Magic Part)
+# 3. Mount the Static Folder 
+# (This serves your CSS, Images, and Javascript)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# 4. The Home Route (Loads your Website)
 @app.get("/")
 async def read_root():
+    # This assumes your index.html is inside the 'static' folder.
+    # If your index.html is in a 'templates' folder, change this line!
     return FileResponse('static/index.html')
 
+# 5. The Chat Route (Where the magic happens)
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    user_input = request.message
+    
+    try:
+        # Ask Groq (Llama 3) for an answer
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_input,
+                }
+            ],
+            model="llama3-8b-8192", # This is the free, fast model
+        )
+        
+        # Extract the answer
+        bot_response = chat_completion.choices[0].message.content
+        
+        return {"response": bot_response}
+
+    except Exception as e:
+        # If something breaks, tell the user
+        return {"response": f"Error: {str(e)}"}
+
+# 6. Run the Server
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
