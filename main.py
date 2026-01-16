@@ -1,25 +1,23 @@
 import os
 import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from groq import Groq
 
-# 1. Initialize App
 app = FastAPI()
 
-# 2. Setup Groq
+# 1. Setup Groq (The Brain)
+# It will look for the key in Render's settings
 client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
 
-# 3. Define Input Format
-# We accept flexible inputs just in case
 class ChatRequest(BaseModel):
     message: str
 
-# 4. Mount Static Files
+# 2. Serve the Website files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
@@ -28,40 +26,23 @@ async def read_root():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    user_input = request.message
-    
     try:
-        # Ask Groq
+        # Ask Groq (Llama 3)
         chat_completion = client.chat.completions.create(
             messages=[
-                {"role": "user", "content": user_input}
+                {"role": "user", "content": request.message}
             ],
             model="llama3-8b-8192",
         )
         
-        bot_response = chat_completion.choices[0].message.content
+        # Get the answer
+        bot_reply = chat_completion.choices[0].message.content
         
-        # --- THE FIX ---
-        # Send the answer back using ALL common names.
-        # This ensures your frontend finds it no matter what it's looking for.
-        return {
-            "response": bot_response,
-            "reply": bot_response,
-            "text": bot_response,
-            "answer": bot_response,
-            "message": bot_response
-        }
+        # Send it back in a format our new website expects
+        return {"reply": bot_reply}
 
     except Exception as e:
-        error_msg = f"Error: {str(e)}"
-        print(error_msg) # Print to logs
-        return {
-            "response": error_msg,
-            "reply": error_msg,
-            "text": error_msg,
-            "answer": error_msg,
-            "message": error_msg
-        }
+        return {"reply": f"Error: {str(e)}"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
