@@ -1,62 +1,69 @@
 import os
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from groq import Groq
 
-# 1. Initialize the App
+# 1. Initialize App
 app = FastAPI()
 
-# 2. Setup the "Groq" Brain
-# It looks for the key in your Render Environment Variables
+# 2. Setup Groq
 client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
 
-# Define the data format for incoming messages
+# 3. Define Input Format
+# We accept flexible inputs just in case
 class ChatRequest(BaseModel):
     message: str
 
-# 3. Mount the Static Folder 
-# (This serves your CSS, Images, and Javascript)
+# 4. Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 4. The Home Route (Loads your Website)
 @app.get("/")
 async def read_root():
-    # This assumes your index.html is inside the 'static' folder.
-    # If your index.html is in a 'templates' folder, change this line!
     return FileResponse('static/index.html')
 
-# 5. The Chat Route (Where the magic happens)
 @app.post("/chat")
 async def chat(request: ChatRequest):
     user_input = request.message
     
     try:
-        # Ask Groq (Llama 3) for an answer
+        # Ask Groq
         chat_completion = client.chat.completions.create(
             messages=[
-                {
-                    "role": "user",
-                    "content": user_input,
-                }
+                {"role": "user", "content": user_input}
             ],
-            model="llama3-8b-8192", # This is the free, fast model
+            model="llama3-8b-8192",
         )
         
-        # Extract the answer
         bot_response = chat_completion.choices[0].message.content
         
-        return {"response": bot_response}
+        # --- THE FIX ---
+        # Send the answer back using ALL common names.
+        # This ensures your frontend finds it no matter what it's looking for.
+        return {
+            "response": bot_response,
+            "reply": bot_response,
+            "text": bot_response,
+            "answer": bot_response,
+            "message": bot_response
+        }
 
     except Exception as e:
-        # If something breaks, tell the user
-        return {"response": f"Error: {str(e)}"}
+        error_msg = f"Error: {str(e)}"
+        print(error_msg) # Print to logs
+        return {
+            "response": error_msg,
+            "reply": error_msg,
+            "text": error_msg,
+            "answer": error_msg,
+            "message": error_msg
+        }
 
-# 6. Run the Server
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
