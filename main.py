@@ -9,7 +9,6 @@ from groq import Groq
 app = FastAPI()
 
 # 1. Setup Groq (The Brain)
-# It will look for the key in Render's settings
 client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
@@ -27,18 +26,18 @@ async def read_root():
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
-        # Ask Groq (Llama 3)
+        # Ask Groq (Using the NEW Llama 3.1 model)
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "user", "content": request.message}
             ],
-            model="llama3-8b-8192",
+            # This is the new valid model name
+            model="llama-3.1-8b-instant",
         )
         
         # Get the answer
         bot_reply = chat_completion.choices[0].message.content
         
-        # Send it back in a format our new website expects
         return {"reply": bot_reply}
 
     except Exception as e:
